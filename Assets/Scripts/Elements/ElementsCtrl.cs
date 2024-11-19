@@ -7,21 +7,24 @@ public class ElementsCtrl : MonoBehaviour
     [SerializeField] private bool isDragging = false;
     private bool canAttack = true;
 
-    //Draw Circle
-    public LineRenderer circleRenderer;
-    public int subdivision = 10;
-
     //Stats
-    public float damge;
+    public float damage;
     //public float moveSpeed;
     public float attackSpeed;
-    private float attackTerm;
+    public float attackTerm;
     public float criticalPercent;
     public float criticalDamage;
     public float attackRange;
 
+    //Attack
+    public RaycastHit2D[] enemies;
+    public Transform neariestEnemy;
+    [SerializeField] LayerMask enemyLayer;
 
-    private void Update()
+    //Combine
+    [SerializeField] GameObject[] nextLevelGO;
+
+    private void FixedUpdate()
     {
         attackTerm -= Time.deltaTime;
 
@@ -30,11 +33,10 @@ public class ElementsCtrl : MonoBehaviour
         if (isDragging)
         {
             Move();
-            //ShowAttackRange();
         }
-        if (attackTerm <= attackSpeed)
+        if (attackTerm <= 0.0f && canAttack)
         {
-            Attack();
+            CheckEnemy();
         }
 
 
@@ -43,22 +45,7 @@ public class ElementsCtrl : MonoBehaviour
     {
         isDragging = !isDragging;
     }
-    private void ShowAttackRange()
-    {
-        
-        circleRenderer.positionCount = subdivision;
 
-        for(int i = 0; i<subdivision; i++)
-        {
-            float angleStep = 2f * Mathf.PI / subdivision;
-            float posX = attackRange*Mathf.Cos(angleStep * i);
-            float posY = attackRange*Mathf.Sin(angleStep * i);
-
-            Vector3 pointInCircle = new Vector3(posX,posY,0);
-
-            circleRenderer.SetPosition(i, pointInCircle);
-        }
-    }
     private void Move()
     {
         Vector2 movePos = (Vector2)Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -68,14 +55,42 @@ public class ElementsCtrl : MonoBehaviour
         if (movePos.y <= GameManager.instance.minY) movePos.y = GameManager.instance.minY;
         transform.position = movePos;
     }
-    private void OnDrawGizmos()
-    {
 
+    private void CheckEnemy()
+    {
+        enemies = Physics2D.CircleCastAll(transform.position, attackRange, Vector2.zero, 0, enemyLayer);
+        neariestEnemy = GetNearest();
+        if(neariestEnemy != null) Attack();
     }
-    public void Attack()
+    Transform GetNearest()
+    {
+        Transform result = null;
+        float diff = 100;
+        foreach (RaycastHit2D target in enemies)
+        {
+            Vector3 myPos = transform.position;
+            Vector3 enemyPos = target.transform.position;
+            float curDiff = Vector3.Distance(myPos,enemyPos);
+
+            if (curDiff < diff)
+            {
+                diff = curDiff;
+                result = target.transform;
+            }
+        }
+        return result;
+    }
+    private void Attack()
     {
         attackTerm = attackSpeed;
-        //Physics2D
-
+        neariestEnemy.GetComponent<EnemyCtrl>().GetDamage(this.damage);
+        StartCoroutine(ScaleChange());
+    }
+    //Check Attack
+    private IEnumerator ScaleChange()
+    {
+        this.transform.localScale = new Vector3(1.0f,1.0f,1);
+        yield return new WaitForSeconds(0.1f);
+        this.transform.localScale = new Vector3(1.2f, 1.2f, 1);
     }
 }

@@ -1,15 +1,18 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EnemyCtrl : MonoBehaviour
 {
     //Stats
     public float hp;
+    private float maxHp;
     public float moveSpeed;
-    public float gold;
+    public int gold;
     public float Type; // 0=Fire, 1=Water, 2=Earth, 3=Dark, 4=Special
-    private bool isDie;
+    private bool isDie = false;
+    [SerializeField] private Image hpImage;
 
     private int moveCheckPoint = 0;
     [SerializeField] private Transform[] movePos;
@@ -18,11 +21,18 @@ public class EnemyCtrl : MonoBehaviour
 
     private void Awake()
     {
+        maxHp = hp;
         rb = GetComponent<Rigidbody>();
     }
 
     private void Update()
     {
+        if (hp<= 0.0f && !isDie)
+        {
+            StartCoroutine(Die());
+        }
+        hpImage.fillAmount = (hp / maxHp);
+
         if (!isDie)
         {
             Move(moveCheckPoint);
@@ -43,6 +53,17 @@ public class EnemyCtrl : MonoBehaviour
             if(moveCheckPoint ==4)moveCheckPoint = 0;
         }
     }
-
+    public void GetDamage(float damage)
+    {
+        hp -= damage;
+    }
+    private IEnumerator Die()
+    {
+        GameManager.instance.Gold += gold;
+        isDie = true;
+        SpawnManager.instance.remainEnemy--;
+        yield return new WaitForSeconds(0.1f);
+        Destroy(this.gameObject);
+    }
 
 }
